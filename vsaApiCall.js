@@ -1,7 +1,7 @@
 import axios from 'axios';
 import crypto from 'crypto'; // TODO: use core node crypto.
 import https from 'https';
-import { useProxy, proxyUrl, agent, baseUrl, randName,  iterateUrlObj } from './index.js';
+import { useProxy, proxyUrl, agent, baseUrl, iterateUrlObj } from './index.js';
 
 function genAuthToken(payload) {
 	const username = payload.usernameAPI;
@@ -52,7 +52,6 @@ export default function vsaApiCall(payload, i) {
 	if (!method || (method !== 'GET' && method !== 'PUT' && method !== 'POST')){
 		throw new Error('vsaAPICall - method missing or invalid! method is '+method);
 	}
-	// init the variable that lets us decide if we are authenticating or requesting data.
 	let headerAuthType;
 	// if we were not initially sent a token, OR we dont yet have one stored from a previous authentication attempt
 	// we default to trying to authenticate in order to get a token.
@@ -77,11 +76,6 @@ export default function vsaApiCall(payload, i) {
 				url,
 				method,
 			};
-			// this sets the query string if we were called with optionalParameters
-			// if (method === 'GET' && optionalParameters) {
-			// 	requestObj.qs = optionalParameters;
-			// }
-			// sets the JSON payload we sent if we are making a PUT/POST call
 			if ((method === 'PUT' || method === 'POST') && optionalParameters) {
 				requestObj.data = optionalParameters;
 			}
@@ -102,14 +96,11 @@ export default function vsaApiCall(payload, i) {
 						if (response.status === 200) {
 							if (Result && Result.Token) {
 								// We have a token - this is an authentication request.
-								// The auth request includes the tenant Id which we need in other functions. Store it.
 								// Store the token to be used for our next request.
 								payload.token = Result.Token;
-								// Now run a request again since we are authenticated.
 								console.log('*** SUCCESSFULLY AUTHENTICATED ***');
 								resolve(vsaApiCall(payload, i));
 							} else {
-								// we did not hit an error, and we are not receiving an authentication request result - return the result, and return the tenantId we stored from our earlier authentication request.
 								console.log('response success: ', response.status);
 								resolve(Result);
 							}

@@ -1,5 +1,6 @@
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import vsaApiCall from './vsaApiCall.js';
+export const baseUrl = '';
 const delayMs = 2000; // delay each request by 100ms
 const maxIterate = 5;
 export const useProxy = false; // if not using a proxy set to false.
@@ -9,7 +10,7 @@ export const iterateUrlObj = {};
 iterateUrlObj.iterateUrlNum	= 0;
 
 console.log('** Kaseya API Call Test');
-export const baseUrl = '';
+
 const authToken = '';
 const password = undefined;
 
