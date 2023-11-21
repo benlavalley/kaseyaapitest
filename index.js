@@ -15,6 +15,7 @@ const authToken = '';
 const password = undefined;
 
 const agentId = '';
+const username = '';
 const agentProcIdArray = ['','','','',''];
 const agentProcVarCaption = 'testprompt';
 const agentProcVarName = 'testvariable';
@@ -25,7 +26,7 @@ for (let i = 0; i < maxIterate; i++) {
 		const agentProcId = agentProcIdArray[i];
 		await new Promise(r => setTimeout(r, delayMs)); // one-line delay so we dont hammer the webserver...
 		const payload = {
-			usernameAPI: 'newaccount',
+			username,
 			authToken,
 			password,
 			endpoint: `/automation/agentprocs/${agentId}/${agentProcId}/runnow`,

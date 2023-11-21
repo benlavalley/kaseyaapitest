@@ -4,7 +4,7 @@ import https from 'https';
 import { useProxy, proxyUrl, agent, baseUrl, iterateUrlObj } from './index.js';
 
 function genAuthToken(payload) {
-	const username = payload.usernameAPI;
+	const username = payload.username;
 	if (payload.password) {
 		const rand = Math.floor(Math.random() * 1000000);
 		const password = payload.password;
