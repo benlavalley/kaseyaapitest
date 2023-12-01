@@ -1,7 +1,7 @@
 import axios from 'axios';
 import crypto from 'crypto'; // TODO: use core node crypto.
 import https from 'https';
-import { useProxy, proxyUrl, agent, baseUrl, iterateUrlObj } from './index.js';
+import { useProxy, proxyUrl, agent, baseUrl, authObj } from './index.js';
 
 function genAuthToken(payload) {
 	const username = payload.username;
@@ -35,7 +35,6 @@ function genAuthToken(payload) {
 
 export default function vsaApiCall(payload, i) {
 	let token;
-	iterateUrlObj.iterateUrlNum = i;
 	// use the endpoint we are being sent.
 	let requestEndpoint = payload.endpoint;
 	// we can be called with no method - default to GET.
@@ -43,10 +42,10 @@ export default function vsaApiCall(payload, i) {
 	// authentication parameters for authentication and getting a bearer token.
 	let optionalParameters = payload.optionalParameters;
 	if (!requestEndpoint){
-		throw new Error('vsaAPICall - endpoint missing!');
+		throw new Error('vsaAPICall - endpoint missing! payload: '+JSON.stringify(payload));
 	}
 	if (!baseUrl){
-		throw new Error('vsaAPICall - baseUrl missing!');
+		throw new Error('vsaAPICall - baseUrl missing! payload: '+JSON.stringify(payload));
 	}
 	// if the callee typod the method, catch it.
 	if (!method || (method !== 'GET' && method !== 'PUT' && method !== 'POST')){
@@ -55,7 +54,7 @@ export default function vsaApiCall(payload, i) {
 	let headerAuthType;
 	// if we were not initially sent a token, OR we dont yet have one stored from a previous authentication attempt
 	// we default to trying to authenticate in order to get a token.
-	if (!payload.token) {
+	if (!authObj.authToken) {
 		method = 'GET';
 		requestEndpoint = '/auth';
 		// this isnt really the token, but our authentication request hash.
@@ -64,7 +63,7 @@ export default function vsaApiCall(payload, i) {
 		optionalParameters = undefined;
 	} else {
 		// we already have a token, time to request our data with the Bearer token.
-		token = payload.token;
+		token = authObj.authToken;
 		headerAuthType = 'Bearer';
 	}
 	// console.log(`vsaAPICall: requesting data from "${endpoint}" for server "${baseUrl}" with token "${token}" and method "${method}" - optionalParameters are "${JSON.stringify(optionalParameters)}"`);
@@ -78,6 +77,8 @@ export default function vsaApiCall(payload, i) {
 			};
 			if ((method === 'PUT' || method === 'POST') && optionalParameters) {
 				requestObj.data = optionalParameters;
+			} else if (optionalParameters) {
+				requestObj.params = optionalParameters;
 			}
 			requestObj.headers = {
 				'Authorization': `${headerAuthType} ${token}`
@@ -88,34 +89,33 @@ export default function vsaApiCall(payload, i) {
 			requestObj.httpsAgent= new https.Agent({
 				rejectUnauthorized: false,
 			});
-			console.log('axios requestObj url: ', requestObj.url);
 			try {
 				axios(requestObj)
 					.then(function (response) {
 						const Result = response && response.data && response.data.Result;
-						if (response.status === 200) {
+						const statusCode = response && response.status
+						if (statusCode === 200 || statusCode === 204) {
 							if (Result && Result.Token) {
 								// We have a token - this is an authentication request.
 								// Store the token to be used for our next request.
-								payload.token = Result.Token;
-								console.log('*** SUCCESSFULLY AUTHENTICATED ***');
+								console.log('vsaAPICall authentication success - statusCode: '+statusCode);
+								authObj.authToken = Result.Token;
 								resolve(vsaApiCall(payload, i));
 							} else {
-								console.log('response success: ', response.status);
-								resolve(Result);
+								resolve(response);
 							}
-						} else if (response.status === 204) {
-							console.log('response success: ', response.status);
-							resolve(Result);
 						}  else {
-							console.log('response ERROR - statusCode: ', response.status);
-							console.log('response ERROR - requestObj: ', requestObj);
+							console.log('vsaAPICall - - unrecognized or missing status code - requestObj: ', requestObj,' || response: ', response);
 							reject();
 						}
-					});
+					})
+					.catch(error => {
+						console.log('vsaAPICall - unhandled error - requestObj: ', requestObj,' || error: ', error);
+						reject(error);
+					})
 			} catch (e) {
 				console.log('vsaAPICall - error attempting to make request - requestObj: ', requestObj,' || error: ', e);
-				reject();
+				reject(e);
 			}
 		});
 	} catch (e) {
